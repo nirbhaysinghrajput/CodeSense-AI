@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeSense AI – LLM Code Review Assistant</title>
+  <meta name="description" content="AI-powered code review assistant. Get instant bug detection, complexity analysis, optimization suggestions, and documentation using Google Gemini." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-3"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M4 8L10 14L4 20" stroke="url(#grad1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 20H24" stroke="url(#grad1)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="21" cy="8" r="4" fill="url(#grad2)" opacity="0.9"/>
+            <defs>
+              <linearGradient id="grad1" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#818cf8"/>
+                <stop offset="1" stop-color="#34d399"/>
+              </linearGradient>
+              <linearGradient id="grad2" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#818cf8"/>
+                <stop offset="1" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">CodeSense</span>
+          <span class="logo-badge">AI</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="api-status" id="apiStatus">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Checking...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#818cf8" stroke-width="1.5"/><path d="M7 4v3l2 2" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Powered by Google Gemini
+      </div>
+      <h1 class="hero-title">
+        AI Code Review<br />
+        <span class="gradient-text">at Lightning Speed</span>
+      </h1>
+      <p class="hero-subtitle">Debug, explain, optimize, and document your code instantly with the power of large language models.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card"><span class="stat-num">5</span><span class="stat-label">Analysis Modes</span></div>
+      <div class="stat-card"><span class="stat-num">20+</span><span class="stat-label">Languages</span></div>
+      <div class="stat-card"><span class="stat-num">∞</span><span class="stat-label">Code Reviews</span></div>
+    </div>
+  </section>
+
+  <!-- Main App -->
+  <main class="app-container">
+    <!-- Input Panel -->
+    <section class="panel input-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4h14M2 9h9M2 14h5" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/></svg>
+          Your Code
+        </h2>
+        <button class="btn-ghost" id="clearBtn" title="Clear editor">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Clear
+        </button>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="controls-row">
+        <!-- Language -->
+        <div class="control-group">
+          <label class="control-label" for="languageSelect">Language</label>
+          <div class="select-wrapper">
+            <select id="languageSelect" class="custom-select">
+              <option value="python">🐍 Python</option>
+              <option value="javascript">⚡ JavaScript</option>
+              <option value="java">☕ Java</option>
+              <option value="cpp">🔷 C++</option>
+              <option value="c">🔵 C</option>
+              <option value="typescript">🔹 TypeScript</option>
+              <option value="go">🐹 Go</option>
+              <option value="rust">🦀 Rust</option>
+              <option value="ruby">💎 Ruby</option>
+              <option value="php">🐘 PHP</option>
+              <option value="swift">🍎 Swift</option>
+              <option value="kotlin">💜 Kotlin</option>
+              <option value="csharp">🎯 C#</option>
+              <option value="sql">🗄️ SQL</option>
+              <option value="bash">🐚 Bash</option>
+              <option value="r">📊 R</option>
+            </select>
+            <svg class="select-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+
+        <!-- Action -->
+        <div class="control-group">
+          <label class="control-label">Analysis Type</label>
+          <div class="action-tabs" id="actionTabs">
+            <button class="action-tab active" data-action="review" id="tab-review">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3H12l-2.7 2 1 3.2L7 7.5 3.7 9.2l1-3.2L2 4h3.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+              Review
+            </button>
+            <button class="action-tab" data-action="explain" id="tab-explain">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 6v4M7 4.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Explain
+            </button>
+            <button class="action-tab" data-action="debug" id="tab-debug">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2h4M3 4h8l-1 7H4L3 4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              Debug
+            </button>
+            <button class="action-tab" data-action="optimize" id="tab-optimize">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l3-4 2.5 2L10 4l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Optimize
+            </button>
+            <button class="action-tab" data-action="document" id="tab-document">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h4M5 7.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Docs
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Editor -->
+      <div class="editor-wrapper">
+        <div class="editor-toolbar">
+          <div class="editor-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <span class="editor-label" id="editorLabel">code.py</span>
+          <div class="editor-actions">
+            <button class="btn-icon" id="pasteExampleBtn" title="Load example">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="9" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 1h8a1 1 0 011 1v10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Example
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="codeInput"
+          class="code-editor"
+          placeholder="# Paste your code here...
+# Example:
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+        ></textarea>
+        <div class="editor-footer">
+          <span class="char-count" id="charCount">0 characters</span>
+          <span class="line-count" id="lineCount">0 lines</span>
+        </div>
+      </div>
+
+      <!-- Analyze Button -->
+      <button class="btn-analyze" id="analyzeBtn">
+        <span class="btn-analyze-content" id="analyzeBtnContent">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1l2 5.5H17l-4.6 3.3 1.7 5.5L9 12l-5.1 3.3 1.7-5.5L1 6.5h6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          Analyze with AI
+        </span>
+        <span class="btn-analyze-loading hidden" id="analyzeBtnLoading">
+          <span class="spinner"></span>
+          Analyzing...
+        </span>
+      </button>
+    </section>
+
+    <!-- Output Panel -->
+    <section class="panel output-panel" id="outputPanel">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9h14M9 2l7 7-7 7" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          AI Analysis
+        </h2>
+        <button class="btn-ghost" id="copyResultBtn" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="4" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 11V2h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Copy
+        </button>
+      </div>
+
+      <!-- Placeholder State -->
+      <div class="output-placeholder" id="outputPlaceholder">
+        <div class="placeholder-icon">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="30" stroke="url(#ph-grad)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <path d="M20 28l8 8 16-16" stroke="url(#ph-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="ph-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#818cf8"/>
+                <stop offset="1" stop-color="#34d399"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h3 class="placeholder-title">Ready to Analyze</h3>
+        <p class="placeholder-text">Paste your code, choose an analysis type,<br/>and click <strong>Analyze with AI</strong>.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <span class="feature-icon">🐛</span>
+            <span>Bug Detection</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">⚡</span>
+            <span>Complexity Analysis</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🚀</span>
+            <span>Optimization Tips</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">📖</span>
+            <span>Auto Documentation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div class="output-error hidden" id="outputError">
+        <div class="error-icon">⚠️</div>
+        <h3 id="errorTitle">Something went wrong</h3>
+        <p id="errorMessage">An unexpected error occurred.</p>
+      </div>
+
+      <!-- Result Container -->
+      <div class="output-result hidden" id="outputResult"></div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Built with ❤️ using <strong>Flask</strong> + <strong>Google Gemini</strong> | CodeSense AI © 2025</p>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
