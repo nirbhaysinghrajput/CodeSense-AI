@@ -196,38 +196,72 @@ Respond with ONLY the JSON object. No markdown, no explanation outside the JSON.
 
 # ─────────────────────────── Helper Functions ────────────────────────────────
 
+import time
+
 def call_gemini(prompt: str) -> dict:
-    """Call Gemini API and parse JSON response."""
+    """Call Gemini API with automatic retry for temporary errors."""
+
     if not AI_READY:
-        return {"error": "API key not configured. Please add your GEMINI_API_KEY to the .env file."}
-    
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.3,
-                max_output_tokens=8192,
+        return {
+            "error": "API key not configured. Please add your GEMINI_API_KEY to the .env file."
+        }
+
+    max_retries = 3
+
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    max_output_tokens=8192,
+                    response_mime_type="application/json",
+                )
             )
-        )
-        
-        raw_text = response.text.strip()
-        
-        # Strip markdown code fences if present
-        if raw_text.startswith("```json"):
-            raw_text = raw_text[7:]
-        if raw_text.startswith("```"):
-            raw_text = raw_text[3:]
-        if raw_text.endswith("```"):
-            raw_text = raw_text[:-3]
-        raw_text = raw_text.strip()
-        
-        return json.loads(raw_text)
-    
-    except json.JSONDecodeError as e:
-        return {"error": f"Failed to parse AI response: {str(e)}", "raw": response.text[:500] if 'response' in locals() else ""}
-    except Exception as e:
-        return {"error": f"AI API error: {str(e)}"}
+
+            raw_text = response.text.strip()
+
+            # Remove markdown code fences if returned
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:]
+            elif raw_text.startswith("```"):
+                raw_text = raw_text[3:]
+
+            if raw_text.endswith("```"):
+                raw_text = raw_text[:-3]
+
+            raw_text = raw_text.strip()
+
+            return json.loads(raw_text)
+
+        except json.JSONDecodeError as e:
+            return {
+                "error": f"Failed to parse AI response: {str(e)}",
+                "raw": response.text[:500] if "response" in locals() else ""
+            }
+
+        except Exception as e:
+            error_message = str(e)
+
+            # Retry temporary server errors
+            if "503" in error_message or "UNAVAILABLE" in error_message:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    print(
+                        f"Gemini temporarily unavailable. "
+                        f"Retrying in {wait_time} seconds..."
+                    )
+                    time.sleep(wait_time)
+                    continue
+
+            return {
+                "error": f"AI API error: {error_message}"
+            }
+
+    return {
+        "error": "Gemini is temporarily unavailable. Please try again."
+    }
 
 
 # ─────────────────────────── Routes ──────────────────────────────────────────
