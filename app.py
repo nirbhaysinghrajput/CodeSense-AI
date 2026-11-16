@@ -211,7 +211,7 @@ def call_gemini(prompt: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+                model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.3,
@@ -300,6 +300,11 @@ def analyze():
         return jsonify(result), 500
     
     return jsonify({"action": action, "language": language, "result": result})
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
