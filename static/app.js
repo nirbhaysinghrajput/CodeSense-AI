@@ -138,6 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function checkApiStatus() {
   try {
     const res = await fetch('/api/status');
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      statusDot.className = 'status-dot error';
+      statusText.textContent = 'Server Starting...';
+      return;
+    }
     const data = await res.json();
     if (data.ready) {
       statusDot.className = 'status-dot ready';
@@ -245,7 +251,19 @@ async function runAnalysis() {
       })
     });
 
-    const data = await response.json();
+    let data = null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      if (response.status === 504 || response.status === 502) {
+        showError('Server Timeout / Cold Start', 'The cloud server is waking up or the AI model took longer to respond. Please try again.');
+      } else {
+        showError('Server Error', `Server returned status ${response.status}. Please check server logs or ensure Flask is running.`);
+      }
+      return;
+    }
 
     if (!response.ok || data.error) {
       showError(
@@ -260,7 +278,7 @@ async function runAnalysis() {
     copyResultBtn.style.display = 'flex';
 
   } catch (err) {
-    showError('Network Error', `Could not reach the server. Make sure Flask is running.\n\n${err.message}`);
+    showError('Network Error', `Could not reach the server. Make sure the server is running.\n\n${err.message}`);
   } finally {
     setLoading(false);
   }
