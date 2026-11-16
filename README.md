@@ -87,7 +87,7 @@ Developer Improvement
 | Category | Technology |
 |----------|------------|
 | Backend | Python, Flask, Flask-CORS |
-| AI Model | Google Gemini 1.5 Flash |
+| AI Model | Google Gemini 3.8 Flash |
 | Frontend | HTML, CSS, JavaScript |
 | Styling | Dark Glassmorphism UI |
 | Fonts | Inter, JetBrains Mono |

@@ -211,7 +211,7 @@ def call_gemini(prompt: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+                model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.3,
