@@ -256,20 +256,25 @@ async function runAnalysis() {
     if (contentType.includes('application/json')) {
       data = await response.json();
     } else {
-      const text = await response.text();
       if (response.status === 504 || response.status === 502) {
-        showError('Server Timeout / Cold Start', 'The cloud server is waking up or the AI model took longer to respond. Please try again.');
+        showError('Server Waking Up', 'The cloud service is warming up or took longer to respond. Please try again in a few moments.');
       } else {
-        showError('Server Error', `Server returned status ${response.status}. Please check server logs or ensure Flask is running.`);
+        showError('Service Unavailable', 'The server is temporarily unavailable. Please try again in a moment.');
       }
       return;
     }
 
-    if (!response.ok || data.error) {
-      showError(
-        'Analysis Failed',
-        data.error || `Server returned ${response.status}`
-      );
+    if (!response.ok || (data && data.error)) {
+      const msg = (data && data.error) ? data.error : 'Unable to complete the analysis. Please try again.';
+      let title = 'Analysis Notice';
+      if (msg.includes('Rate Limit')) {
+        title = 'Rate Limit Reached';
+      } else if (msg.includes('API key') || msg.includes('API Key')) {
+        title = 'Configuration Required';
+      } else if (msg.includes('busy') || msg.includes('overloaded') || msg.includes('high traffic')) {
+        title = 'Service Busy';
+      }
+      showError(title, msg);
       return;
     }
 
@@ -278,7 +283,7 @@ async function runAnalysis() {
     copyResultBtn.style.display = 'flex';
 
   } catch (err) {
-    showError('Network Error', `Could not reach the server. Make sure the server is running.\n\n${err.message}`);
+    showError('Connection Issue', 'Unable to reach the server. Please check your internet connection and try again.');
   } finally {
     setLoading(false);
   }

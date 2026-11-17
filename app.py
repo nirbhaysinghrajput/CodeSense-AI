@@ -199,11 +199,11 @@ Respond with ONLY the JSON object. No markdown, no explanation outside the JSON.
 import time
 
 def call_gemini(prompt: str) -> dict:
-    """Call Gemini API with automatic retry for temporary errors."""
+    """Call Gemini API with automatic retry and friendly, user-facing error messages."""
 
     if not AI_READY:
         return {
-            "error": "API key not configured. Please add your GEMINI_API_KEY to the .env file."
+            "error": "Gemini API key is not configured. Please add your GEMINI_API_KEY to the environment settings."
         }
 
     max_retries = 3
@@ -235,41 +235,68 @@ def call_gemini(prompt: str) -> dict:
 
             return json.loads(raw_text)
 
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
+            if attempt < max_retries - 1:
+                time.sleep(1)
+                continue
             return {
-                "error": f"Failed to parse AI response: {str(e)}",
-                "raw": response.text[:500] if "response" in locals() else ""
+                "error": "The AI provided a response in an unexpected format. Please try running the analysis again."
             }
 
         except Exception as e:
             error_message = str(e)
+            print(f"[Gemini API Error] Attempt {attempt + 1}/{max_retries}: {error_message}")
 
-            # Retry temporary server errors
+            # 1. Retry temporary server errors (503 / UNAVAILABLE)
             if "503" in error_message or "UNAVAILABLE" in error_message:
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt
-                    print(
-                        f"Gemini temporarily unavailable. "
-                        f"Retrying in {wait_time} seconds..."
-                    )
                     time.sleep(wait_time)
                     continue
+                return {
+                    "error": "Google AI service is temporarily experiencing high traffic. Please try again in a few moments."
+                }
 
-            # Friendly message for 429 rate limit
+            # 2. Friendly handling for 429 Rate Limits / Quotas
             if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
                 import re
                 retry_match = re.search(r'retry in ([0-9.]+)s', error_message)
-                seconds = f"{float(retry_match.group(1)):.0f}" if retry_match else "30"
+                seconds = f"{float(retry_match.group(1)):.0f}" if retry_match else "25"
                 return {
-                    "error": f"Free Tier Rate Limit Reached: Google Gemini free quota exceeded. Please wait {seconds} seconds and try again."
+                    "error": f"Free Tier Rate Limit: Google Gemini allows a limited number of requests per minute. Please wait {seconds} seconds and click analyze again."
                 }
 
+            # 3. Invalid API Key
+            if "API_KEY_INVALID" in error_message or ("400" in error_message and ("key" in error_message.lower() or "credential" in error_message.lower())):
+                return {
+                    "error": "Your Gemini API key appears to be invalid. Please check and re-enter your GEMINI_API_KEY."
+                }
+
+            # 4. Permission Denied
+            if "403" in error_message or "PERMISSION_DENIED" in error_message:
+                return {
+                    "error": "Access denied by Google Gemini. Please ensure your API key has permissions enabled for the Generative Language API."
+                }
+
+            # 5. Model Not Found / Retired
+            if "404" in error_message or "NOT_FOUND" in error_message:
+                return {
+                    "error": "The selected AI model is currently unavailable. Please verify your model configuration."
+                }
+
+            # 6. Read / Connection Timeout
+            if "timeout" in error_message.lower():
+                return {
+                    "error": "The AI took too long to analyze this code. Please try submitting a smaller snippet or try again shortly."
+                }
+
+            # 7. Generic clean message (never leak raw exception stack dumps to users)
             return {
-                "error": f"AI API error: {error_message}"
+                "error": "Unable to complete AI analysis right now. Please try again in a moment."
             }
 
     return {
-        "error": "Gemini is temporarily unavailable. Please try again."
+        "error": "Google Gemini service is temporarily unavailable. Please try again shortly."
     }
 
 
@@ -287,20 +314,20 @@ def status():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     
     if not data:
-        return jsonify({"error": "No data provided"}), 400
+        return jsonify({"error": "Please provide code to analyze."}), 400
     
     code = data.get("code", "").strip()
     language = data.get("language", "python").strip()
     action = data.get("action", "review").strip().lower()
     
     if not code:
-        return jsonify({"error": "No code provided"}), 400
+        return jsonify({"error": "Please enter or paste your code snippet to analyze."}), 400
     
     if action not in PROMPTS:
-        return jsonify({"error": f"Unknown action: {action}. Valid: review, explain, debug, optimize, document"}), 400
+        return jsonify({"error": "Invalid analysis action selected. Please choose Review, Explain, Debug, Optimize, or Document."}), 400
     
     prompt = PROMPTS[action].format(language=language, code=code)
     result = call_gemini(prompt)
@@ -313,7 +340,8 @@ def analyze():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    return jsonify({"error": f"Server error: {str(e)}"}), 500
+    print(f"[Internal Server Error] {str(e)}")
+    return jsonify({"error": "An unexpected server error occurred. Please try again shortly."}), 500
 
 
 if __name__ == "__main__":
