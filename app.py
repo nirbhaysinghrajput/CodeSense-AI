@@ -255,6 +255,15 @@ def call_gemini(prompt: str) -> dict:
                     time.sleep(wait_time)
                     continue
 
+            # Friendly message for 429 rate limit
+            if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
+                import re
+                retry_match = re.search(r'retry in ([0-9.]+)s', error_message)
+                seconds = f"{float(retry_match.group(1)):.0f}" if retry_match else "30"
+                return {
+                    "error": f"Free Tier Rate Limit Reached: Google Gemini free quota exceeded. Please wait {seconds} seconds and try again."
+                }
+
             return {
                 "error": f"AI API error: {error_message}"
             }
